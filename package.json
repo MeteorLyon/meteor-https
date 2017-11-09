@@ -1,0 +1,12 @@
+{
+  "name": "meteor-https",
+  "private": true,
+  "scripts": {
+    "start": "meteor run --port 3001"
+  },
+  "dependencies": {
+    "babel-runtime": "^6.26.0",
+    "cheerio": "^1.0.0-rc.2",
+    "meteor-node-stubs": "^0.3.2"
+  }
+}
