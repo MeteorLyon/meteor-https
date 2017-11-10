@@ -1,5 +1,8 @@
 import { socks, socksSsl} from 'meteor/rebolon:socks5'
 
+const torHost = '192.168.33.1'
+const torPort = 9150
+
 Meteor.methods({
   /**
    * if the url return a string that is not natively UTF8 or ascii, then you won't be able to read special chars
@@ -48,8 +51,8 @@ Meteor.methods({
   callByTOROnHttps: function() {
     var cheerio = Npm.require('cheerio'),
       Agent = new socksSsl.Agent({
-        socksHost: 'localhost',
-        socksPort: 9150
+        socksHost: torHost,
+        socksPort: torPort
       }),
       response = HTTP.get('https://www.whatismyip.com/', {"npmRequestOptions": {
         "strictSSL": true,
@@ -72,8 +75,8 @@ Meteor.methods({
   callByTOR: function() {
     var cheerio = Npm.require('cheerio'),
       Agent = new socks.Agent({
-        socksHost: 'localhost',
-        socksPort: 9150
+        socksHost: torHost,
+        socksPort: torPort
       }),
       response = HTTP.get('http://www.mon-ip.com/', {"npmRequestOptions": {
         "agentClass": Agent.getClass,
