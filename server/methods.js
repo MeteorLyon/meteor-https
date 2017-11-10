@@ -1,108 +1,99 @@
 import { socks, socksSsl} from 'meteor/rebolon:socks5'
 
-const torHost = '192.168.33.1'
+const torHost = '127.0.0.1'
 const torPort = 9150
 
+const cheerio = Npm.require('cheerio')
+
+/**
+ * Take care, some uri are protected with tools like cloudfare, so if the ip used with Tor is blacklisted from those
+ * tools, you will have a 403 with a body that contain a form with a captcha.
+ */
 Meteor.methods({
-  /**
-   * if the url return a string that is not natively UTF8 or ascii, then you won't be able to read special chars
-   * so when you want to parse it or save it into file, it won't work as expected
-   */
-  call: function() {
-    var response = HTTP.get('http://www.leboncoin.fr/annonces/offres/rhone_alpes/');
-
-    // even if you specify , {"encoding": "ascii"} in writeFileSync options, it won't be able to save correctly your data
-    // because it is already in UTF8 (done by request npm package)
-    Npm.require('fs').writeFileSync(Meteor.settings.config.savepath + 'http-call-content.html', response.content);
-
-    return response.content;
-  },
-
-  /**
-   * now that we can use npmRequestOptions with HTTP api, we can specify an encoding to null so we will retrieve BUFFER
-   * instead of an UTF8 string
-   * You will just have to specify encoding null to fs api like in the following code
-   */
-  callWithEncoding: function() {
-    var response = HTTP.get('http://www.leboncoin.fr/annonces/offres/rhone_alpes/', {"npmRequestOptions": {"encoding": null}}),
-      cheerio = Npm.require('cheerio'),
-      buffer = Npm.require('buffer'),
-      $ = cheerio.load(new Buffer(response.content, 'binary')),
-      body = new Buffer(response.content),
-      iconv = Meteor.npmRequire('iconv-lite');
-
-    //console.log('body', body.toString('utf8', 1145, 1156));
-    var dept = iconv.decode(body.slice(1145, 1156), 'iso-8859-15');
-    console.log('body', dept);
-    //var myCol = new Meteor.Collection('callWithEncoding');
-    //myCol.insert({html: response.content, title: $('title').text()});
-    //console.info('headers', response.headers);
-    //console.info('title', $('title').text());
-    //var body = response.content.toString('utf8');
-    Npm.require('fs').writeFileSync(Meteor.settings.config.savepath + 'http-callWithEncoding-content.html', response.content, {"encoding": null});
-    Npm.require('fs').writeFileSync(Meteor.settings.config.savepath + 'NEW-TEST-WITHAUTOCONVERT.html', body.toString(), {"encoding": 'ascii'});
-
-    return response.content;
-  },
-
   /**
    * start your TOR proxy and then call this methods
    */
   callByTOROnHttps: function() {
-    var cheerio = Npm.require('cheerio'),
-      Agent = new socksSsl.Agent({
+    const Agent = new socksSsl.Agent({
         socksHost: torHost,
         socksPort: torPort
       }),
-      response = HTTP.get('https://www.whatismyip.com/', {"npmRequestOptions": {
-        "strictSSL": true,
-        "agentClass": Agent.getClass,
-        "agentOptions": {
-          "socksHost": Agent.socksHost,
-          "socksPort": Agent.socksPort
-        }}}),
-      $ = cheerio.load(response.content),
-      ip = $('#ip-box .ip div').text();
+      uri = 'https://localise-moi.com/'
 
-    console.info('your ip is:', ip);
+    let response, $, ip
 
-    return ip;
+    try {
+      response = HTTP.get(uri, {
+        "npmRequestOptions": {
+          "strictSSL": true,
+          "agentClass": Agent.getClass,
+          "agentOptions": {
+            "socksHost": Agent.socksHost,
+            "socksPort": Agent.socksPort
+          }
+        }
+      })
+      $ = cheerio.load(response.content)
+      ip = $('.location-value.lead').eq(2).text()
+
+      console.info('your ip is:', ip)
+    } catch (e) {
+      console.error('woups...', e)
+    }
+
+    return ip
   },
 
   /**
    * start your TOR proxy and then call this methods
    */
   callByTOR: function() {
-    var cheerio = Npm.require('cheerio'),
-      Agent = new socks.Agent({
+    const Agent = new socks.Agent({
         socksHost: torHost,
         socksPort: torPort
       }),
-      response = HTTP.get('http://www.mon-ip.com/', {"npmRequestOptions": {
-        "agentClass": Agent.getClass,
-        "agentOptions": {
-          "socksHost": Agent.socksHost,
-          "socksPort": Agent.socksPort
-        }}}),
-      $ = cheerio.load(response.content),
-      ip = $('.clip').first().text();
+      uri = 'http://monip.fr/mon-ip'
 
-    console.info('your ip is:', ip);
+    let response, $, ip
 
-    return ip;
+    try {
+      response = HTTP.get(uri, {
+        "npmRequestOptions": {
+          "agentClass": Agent.getClass,
+          "agentOptions": {
+            "socksHost": Agent.socksHost,
+            "socksPort": Agent.socksPort
+          }
+        }
+      })
+      $ = cheerio.load(response.content)
+      ip = $('.big.ipinfo tr td').first().text()
+
+      console.info('your ip is:', ip)
+    } catch (e) {
+      console.error('woups...', e)
+    }
+
+    return ip
   },
 
   callWOTOR: function() {
-    var cheerio = Npm.require('cheerio'),
-      response = HTTP.get('http://www.mon-ip.com/'),
-      $ = cheerio.load(response.content),
-      ip = $('.clip').first().text();
+    let response, $, ip
 
-    console.info('your ip is:', ip);
+    try {
+      response = HTTP.get('http://monip.fr/mon-ip')
+      $ = cheerio.load(response.content)
+      ip = $('.big.ipinfo tr td').first().text()
 
-    return ip;
+      console.info('your ip is:', ip)
+    } catch (e) {
+      console.error('woups...', e)
+    }
+
+    return ip
   }
-});
+})
+
 /*
 Meteor.call('callWOTOR');
 Meteor.call('callByTOR');
